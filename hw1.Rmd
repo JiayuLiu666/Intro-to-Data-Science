@@ -1,0 +1,197 @@
+---
+title: "hw1"
+author: "Jiayu Liu"
+date: "5/24/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+rm(list = ls())
+```
+
+
+
+Problem 1
+```{r cars}
+housing <- read_csv("NYChousing.csv")
+dim(housing)
+```
+There are 22 cloumns and 2506 rows in this dataset.
+
+```{r}
+colnames(housing)
+```
+
+```{r}
+ls(housing)
+```
+
+4. The apply function counts how many NA in each columns. 
+```{r}
+apply(is.na(housing), 2, sum)
+
+
+```
+
+```{r}
+housing1 <- housing %>% drop_na(Value)
+dim(housing1)
+
+
+```
+5. I have removed 2506 - 2454 = 52  rows from the original file. Yes, it agrees with part 4.
+
+6. 
+```{r}
+quantile(housing1$Value)
+```
+75% is 2684851.
+
+```{r}
+housing1$HighValue <- ifelse(housing1$Value > 2684851, "High", "NotHigh")
+housing1
+```
+9.
+```{r}
+table(housing1$HighValue,housing1$Borough)
+
+```
+
+
+10.
+```{r}
+housing1 %>% count(HighValue)
+cat('Proportion is ', 137/(614+1840))
+#condition mean
+mean(housing1$HighValue == "High" & housing1$Borough == "Bronx")
+```
+11. Conditional Probability P(A|B) = P(AB)/P(B)
+```{r}
+cat('The probability is', 0.05582722/((137+527)/(614+1840)))
+
+#2nd method
+mean(housing1$HighValue == "High" & housing1$Borough == "Bronx")/mean(housing1$Borough == "Bronx")
+
+```
+
+12.
+```{r}
+logValue <- log(housing1$Value)
+housing1 <- cbind(housing1,logValue)
+cat("min",min(housing1$logValue),"median",median(housing1$logValue),"mean",mean(housing1$logValue),"max",max(housing1$logValue))
+```
+
+13.
+```{r}
+logUnits <- log(housing1$UnitCount)
+housing1 <- cbind(housing1,logUnits)
+```
+
+14.
+```{r}
+housing1$after1950 <- ifelse(housing1$YearBuilt > 1950, "True", "False")
+
+```
+
+Part2
+
+1.
+```{r}
+boxplot(housing1$Value ~ housing1$Borough,
+        main = "boxplot",
+        ylab = "Value",
+        xlab = "Borough"
+        
+        
+        
+        )
+
+
+boxplot(housing1$logValue ~ housing1$Borough,
+        main = "boxplot",
+        ylab = "Log Value",
+        xlab = "Borough"
+        
+        
+        
+        )
+```
+2.
+```{r}
+plot(logUnits,housing1$logValue,xlab="Log Units",ylab="Log Value")
+
+```
+
+3.
+The trend is that there is a positve relation with value and built after 1950, also there is a positive relation with units and built after 1950. We can conclude that after 1950, the houses have more value and more units. 
+```{r}
+plot(logUnits,housing1$logValue, 
+     ylab = "logValue", 
+     xlab = "logUnits", 
+     col = factor(housing1$after1950))
+legend("bottomright", legend = levels(factor(housing1$after1950)), fill
+= unique(factor(housing1$after1950)))
+```
+
+4.
+
+```{r}
+i = cor(logUnits,housing1$logValue)
+print(i)
+Man_Logunits <- subset(housing1$logUnits,housing1$Borough == "Manhattan")
+Man_LogValue <- subset(housing1$logValue,housing1$Borough == "Manhattan")
+
+ii = cor(Man_Logunits,Man_LogValue)
+print(ii)
+```
+```{r}
+cor(housing1[housing1$Borough == "Brooklyn",]$logUnits,housing1[housing1$Borough == "Brooklyn",]$logValue )
+```
+```{r}
+cor(housing1[housing1$after1950 == "True",]$logUnits,housing1[housing1$after1950 == "True",]$logValue )
+```
+```{r}
+cor(housing1[housing1$after1950 == "False",]$logUnits,housing1[housing1$after1950 == "False",]$logValue )
+```
+
+5.
+```{r}
+library(ggplot2)
+
+
+```
+
+
+```{r}
+data_new1 <- subset(housing1,housing1$Borough == "Brooklyn")
+data_new2 <- subset(housing1,housing1$Borough == "Manhattan")
+
+data_new3 <- rbind(data_new1,data_new2)
+
+
+
+
+```
+
+```{r}
+ggplot(data=data_new3, aes(x=logUnits, y=logValue, color=Borough))+geom_point(size=3)
+```
+
+6.
+```{r}
+median(subset(housing1,housing1$Borough =="Manhattan")$Value,na.rm = "True")
+```
+
+7.
+```{r}
+median(subset(housing1,housing1$Borough =="Manhattan")$Value,na.rm = "True")
+median(subset(housing1,housing1$Borough =="Brooklyn")$Value,na.rm = "True")
+median(subset(housing1,housing1$Borough =="Bronx")$Value,na.rm = "True")
+median(subset(housing1,housing1$Borough =="Queens")$Value,na.rm = "True")
+median(subset(housing1,housing1$Borough =="Staten Island")$Value,na.rm = "True")
+```
+
