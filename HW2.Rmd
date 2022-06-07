@@ -1,0 +1,177 @@
+---
+title: "Hw2"
+author: "Jiayu Liu"
+date: "6/3/2022"
+output: html_document
+---
+
+```{r}
+# Base plot
+plot(iris$Sepal.Length,iris$Petal.Length,col=iris$Species,xlab="Sepal",ylab="Petal",main="Gabriel's Plot")
+# loop to construct each LOBF
+for (i in 1:length(levels(iris$Species))) {
+extract <- iris$Species==levels(iris$Species)[i]
+abline(lm(iris$Petal.Length[extract]~iris$Sepal.Length[extract]),col=i)
+}
+# Legend
+legend("right",legend=levels(iris$Species),fill = 1:length(levels(iris$Species)), cex = .75)
+```
+
+
+
+```{r}
+library(ggplot2)
+```
+
+## 1.
+```{r}
+
+ggplot(iris) + geom_point(mapping = aes(x=iris$Sepal.Length,y=iris$Petal.Length,color=iris$Species)) + labs(x="Sepal",y="Petal",title="JY's plot",colour="Species") + scale_x_discrete(limits=seq(4,8,by=0.5)) + scale_y_discrete(limits=seq(1,7,by = 1)) + geom_smooth(aes(x=iris$Sepal.Length,y=iris$Petal.Length,color=iris$Species),method = "lm",se=F,fullrange=T)
+
+p <- ggplot(iris) + geom_point(mapping = aes(x=iris$Sepal.Length,y=iris$Petal.Length,color=iris$Species)) + labs(x="Sepal",y="Petal",title="JY's plot",colour="Species") + scale_x_discrete(limits=seq(4,8,by=0.5)) + scale_y_discrete(limits=seq(1,7,by = 1)) + geom_smooth(aes(x=iris$Sepal.Length,y=iris$Petal.Length,color=iris$Species),method = "lm",se=F,fullrange=T)
+
+
+
+```
+```{r}
+x_num = c(iris$Sepal.Length[15],iris$Sepal.Length[99],iris$Sepal.Length[107])
+y_num = c(iris$Petal.Length[15],iris$Petal.Length[99],iris$Petal.Length[107])
+
+
+
+
+
+```
+
+
+
+
+
+
+```{r}
+p + geom_point(mapping = aes(x=iris$Sepal.Length[15],y=iris$Petal.Length[15]),shape=5) +
+  geom_text(aes(x=iris$Sepal.Length[15],y=iris$Petal.Length[15]),nudge_x = 0.4, nudge_y = 0,colour="Red",label='(5.8,1.2)') +
+  geom_point(mapping = aes(x=iris$Sepal.Length[99],iris$Petal.Length[99]),shape=4) + 
+  geom_text(aes(x=iris$Sepal.Length[99],y=iris$Petal.Length[99]),nudge_x = 0.35, nudge_y = 0,colour="Green",label='(5.1,3)') +
+  geom_point(mapping = aes(x=iris$Sepal.Length[107],iris$Petal.Length[107]),shape=3) +
+  geom_text(aes(x=iris$Sepal.Length[107],y=iris$Petal.Length[107]),nudge_x = 0, nudge_y = 0.35,colour="Blue",label='(4.9,4.5)')
+  
+  
+  
+```
+## Part2
+2. 
+```{r}
+wtid <- read.csv("wtid-report.csv", as.is = TRUE)
+wtid <- wtid[, c("Year", "P99.income.threshold","P99.5.income.threshold", "P99.9.income.threshold")]
+names(wtid) <- c("Year", "P99", "P99.5", "P99.9")
+```
+
+
+
+```{r}
+P99_1993 <- wtid[wtid$Year == 1993,'P99']
+cat("99th in 1993 is",P99_1993)
+```
+
+
+```{r}
+P995_1942 <- wtid[wtid$Year == 1942,"P99.5"]
+cat("99.5th in 1942 is",P995_1942)
+```
+```{r}
+## plot
+data_y <- subset(wtid, Year < 2013,)
+
+data_y <- data_y[ 1912 < wtid$Year,]
+
+data_y <- drop_na(data_y)
+
+
+
+```
+
+## 3.
+```{r}
+colors <- c("P99" = "blue", "P99.5" = "red", "P99.9" = "orange")
+
+ggplot(data=data_y) + geom_line(mapping = aes(x=data_y$Year,y=P99,color='P99')) + geom_line(mapping = aes(x=data_y$Year,y=P99.5,color='P99.5'))+ geom_line(mapping = aes(x=data_y$Year,y=P99.9,color='P99.9'))+ labs(x="Year",y="Income",title="Task 2",color="Level") + 
+  scale_color_manual(values = colors)
+```
+From the plot above, we can tell that as time goes by, people whose income is above 99.9 percent of majority can make more than people whose income is above 99.5. In another word, the difference between extremely rich people and relatively rich people becomes larger. This phonephone is obvious after 1990s. 
+
+
+## Task3
+
+4.
+```{r}
+titanic <- read.table("Titanic.txt",header = TRUE, as.is = TRUE)
+head(titanic)
+```
+```{r}
+ggplot(data=titanic) +
+  geom_bar(aes(x=Sex,fill=factor(Survived)))+
+  labs(title ="Title",fill="Survived")
+```
+
+
+
+```{r}
+ggplot(data=titanic) +
+geom_bar(aes(x=factor(Survived),fill=factor(Survived)))+
+facet_grid(~Sex)+
+labs(title = "Title",fill="Survived",x="")
+```
+##
+Both graph state that although the number of male are more than female, the number of female who were survived in this accident was more than that of male. 
+
+## 5
+```{r}
+ggplot(data=titanic) +
+geom_bar(aes(x=factor(Survived),fill=factor(Survived)))+
+facet_grid(~Pclass)+
+labs(title = "Number of survived ~ Cabin Class",fill="Survived",x="")
+```
+```{r}
+ggplot(data=titanic) +
+  geom_bar(aes(x=Pclass,fill=factor(Survived)))+
+  labs(title ="Number of survived ~ Cabin Class",fill="Survived")
+```
+From the two graph above, we can conclude that people in the 3rd class had the highest death rate compared with people in the 1st or 2nd.
+
+## 6.
+
+```{r}
+df <- titanic <- read.table("Titanic.txt",header = TRUE, as.is = TRUE)
+df <- na.omit(df)
+ggplot(data = df) + geom_histogram(mapping = aes(x = Age,fill=factor(Survived)),col=I("black"))+
+  labs(title='survived people ~ age',fill="Survived",y="Number of people")
+```
+From above that we can tell that the death rate of children is not high compared than other people.
+
+## 7
+```{r}
+x <- rbeta(n=1000, 3, 1, ncp = 0)
+df2 <- data.frame(x)
+
+ggplot(df2,aes(x=x)) +
+  geom_histogram(aes(y = ..density..),
+                 colour = 1, fill = "white") +
+  geom_density(color='red')
+
+
+
+```
+```{r}
+set.seed(5)
+x <- rnorm(1000)
+df <- data.frame(x)
+
+# Histogram with kernel density
+ggplot(df, aes(x = x)) + 
+  geom_histogram(aes(y = ..density..),
+                 colour = 1, fill = "white") +
+  geom_density()
+
+```
+
