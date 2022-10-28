@@ -1,0 +1,272 @@
+---
+title: "Project-Titanic"
+author: "Jiayu Liu"
+date: '2022-06-19'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(plyr)
+library(tidyverse)
+library(fastDummies)
+library(reshape2)
+library(caret)
+library(ROCR)
+```
+
+
+\section{1 Introduction}
+The following Program describes which kind of people can survive easily during Titanic. It utilizes the logistic regression method to predict the survival rate in the test data set based on the train data set.
+
+\section{2 Data Collection and Data Collection}
+```{r}
+test <- read.csv('test.csv',na.strings = c('','NA'))
+train <- read.csv('train.csv',na.strings = c('','NA'))
+```
+
+\subsection{2.1 Data Description}
+```{r}
+head(train)
+```
+From the above data set, we can see 12 fields in this train data set. 'Sibsp' is the attribute of people's number of relatives. The sample size is 891 rows which are not very large. According to the history, there were 1,317 people, and the total observation of trains and tests is 1301, which is closed to the real. 
+
+\section{3 Data Wrangling}
+
+\subsection{3.1 Check NA in the Data set}
+```{r}
+apply(is.na(train),2,sum)
+```
+```{r}
+apply(is.na(test),2,sum)
+```
+From the data above, we can tell there are some missing data in the two sets. In the test data set, there are 327 missing values in Cabin and 687 in the train data set.
+
+Since we need to ensure that the fields are the same in the train and test data set, we should combine these two data sets and perform data cleaning. From the data below, we can see that the Cabin has the most NA term.
+```{r}
+test$Survived <- NA
+new_data <- rbind(train,test)
+apply(is.na(new_data),2,sum)
+```
+\subsection{3.2 Age}
+From the data above, we can tell that the percentage of missing data in the Age field is $\frac{263}{1309} = 0.2009$
+```{r}
+sum(is.na(new_data$Age)) / nrow(new_data)
+```
+Here is the following distribution of age. Since the skewness is not zero, using the mean to replace NA is not the best choice. However, we can use the median to replace the NA.
+```{r}
+hist(new_data$Age,probability = T,breaks = 100,xlab='Age',main = "Distribution of Age")
+den <- density(new_data$Age, na.rm = T)
+lines(den,
+      lwd = 3,
+      col = "chocolate3")
+```
+```{r}
+mean(new_data$Age,na.rm = T)
+median(new_data$Age,na.rm = T)
+new_data$Age[is.na(new_data$Age)] <- 28
+sum(is.na(new_data$Age))
+```
+The mean of 'Age' is 29.88 and the median of 'Age' is 28. After filling with median, we can find there is no NA term in Age field.
+
+\subsection{3.3 Cabin}
+```{r}
+sum(is.na(new_data$Cabin)) / nrow(new_data)
+```
+There is 77.5% data missing in Cabin field. We can simply drop this column. 
+```{r}
+new_data <- select(new_data,-Cabin)
+```
+
+\subsection{3.4 Embarked}
+```{r}
+sum(is.na(new_data$Embarked)) / nrow(new_data)
+```
+
+There are only 2 missing value in ‘Embarked’ field.
+```{r}
+ggplot(new_data, aes(x=factor(Embarked)))+
+  geom_bar(stat="count", width=0.7, fill="steelblue")+
+  theme_minimal() +
+  labs(x = 'Location',y = 'Numbers of Embarked Location')
+```
+We can replace the NA with mode.
+```{r}
+
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+new_data$Embarked[is.na(new_data$Embarked)] <- getmode(new_data$Embarked)
+sum(is.na(new_data$Embarked))
+```
+For the NA in the ticket, we can replace the NA with the mode.
+```{r}
+new_data$Fare[is.na(new_data$Fare)] <- getmode(new_data$Fare)
+sum(is.na(new_data$Fare))
+```
+
+
+```{r}
+apply(is.na(new_data),2,sum)
+```
+
+
+
+\section{4 EDA}
+In this section, we need to explore the data for the later regression analysis.
+```{r}
+test1 <- read.csv('test.csv',na.strings = c('','NA'))
+train1 <- read.csv('train.csv',na.strings = c('','NA'))
+test1$Survived <- NA
+new_data1 <- rbind(train,test)
+new_data1 <- select(new_data1,-Cabin)
+
+hist(new_data$Age,breaks = 10,ylim = c(0,0.07),probability = T,col=rgb(1,0,0,0.5),xlab = 'Age',main='Distribution of Age')
+hist(new_data1$Age, breaks = 10,probability = T,col=rgb(0,0,1,0.5),add=T) 
+den <- density(new_data$Age, na.rm = T)
+lines(den,
+      lwd = 3,
+      col = rgb(1,0,0,0.5))
+den1 <- density(new_data1$Age, na.rm = T)
+lines(den1,
+      lwd = 3,
+      col = rgb(0,0,1,0.5))
+
+legend("topright", legend=c("adjusted age","age"), col=c(rgb(1,0,0,0.5), 
+     rgb(0,0,1,0.5)), pt.cex=2, pch=15 )
+```
+There are two characters in this data set, 'SibSp' and 'Parch'. Both of them describe if they have companies to come with. To prevent Multicollinearity, we can change these two columns into another field, 'Travel Alone.'
+```{r}
+new_data$TravelAlone <- ifelse(new_data$SibSp == 0 & new_data$Parch == 0,1,0)
+```
+
+Also, we need to apply 'One-Hot Encoding' on 'Embarked' and 'Sex' field. We also drop 'Name', 'PassengerId' and 'Ticket'.
+```{r}
+new_data <- dummy_cols(new_data, select_columns = c('Sex','Embarked'))
+```
+
+```{r}
+new_data <- select(new_data, -PassengerId,-Name,-Ticket,-Embarked,-SibSp,-Parch)
+```
+
+\subsection{4.1 Data Analysis}
+```{r}
+df <- new_data
+df <- df %>% drop_na()
+ggplot(data=df,aes(x=Age,fill=factor(Survived))) +
+geom_density(aes(x=Age,fill=factor(Survived)))+
+labs(title = "Density Plot of Age for Surviving Population and Deceased Population",fill="Survived")
+```
+```{r}
+ggplot(data=df,aes(x=Fare,fill=factor(Survived))) +
+geom_density(aes(x=Fare,fill=factor(Survived)))+
+  xlim(0,200)+
+labs(title = "Density Plot of Age for Surviving Population and Deceased Population",fill="Survived")
+```
+```{r}
+ggplot(data=df,na.rm=T) +
+geom_bar(aes(x=Sex,fill=factor(Survived)))+
+facet_grid(~Pclass)+
+labs(title = "Class VS Survived",fill="Survived")
+```
+From above plot, we can tell that most female in the first class were survived. Overall, the survived rate of female were larger than male.
+
+```{r}
+ggplot(data=df) +
+geom_bar(aes(x=TravelAlone,fill=factor(Survived)))+
+  labs(title = "Travel Alone VS Survived",fill="Survived")
+```
+\section{5 Prediction}
+
+\subsection{5.1 Preparing Data}
+```{r}
+train_set <- new_data[is.na(new_data) == FALSE,]
+train_set <- train_set %>% drop_na() %>% select(-Sex)
+```
+
+
+
+```{r}
+test_set <- train_set[668:891,]
+train_set <- train_set[1:667,]
+
+
+```
+
+
+The correlation is the following.
+```{r}
+df <- select(df,-Sex)
+new_data <- select(new_data,-Sex)
+res <- cor(df, method = c("pearson", "kendall", "spearman"))
+data1 <- melt(res)
+```
+
+```{r}
+heatmap(res)
+```
+Building model:
+```{r}
+## Building Model
+model <- glm(Survived ~.,family=binomial(link='logit'),data=train_set)
+
+## Model Summary
+summary(model)
+```
+Using anova to analyze the table of variance. From the table, we can see that the survived rate is linked to the P-class, Age.
+```{r}
+anova(model, test="Chisq")
+```
+```{r}
+result <- predict(model,newdata=test_set,type='response')
+result <- ifelse(result > 0.5,1,0)
+```
+Calculating the error:
+```{r}
+ref <- test_set$Survived
+result.list <- lapply(split(result, names(result)), unname)
+result.list <- as.integer(unlist(result.list))
+```
+
+
+```{r}
+error <- mean(result.list != ref)
+accuracy <- 1 - error
+accuracy
+```
+The accuracy for this model is 80.3% which is high. 
+
+```{r}
+predictions <- predict(model, newdata=test_set, type="response")
+ROCRpred <- prediction(predictions, test_set$Survived)
+ROCRperf <- performance(ROCRpred, measure = "tpr", x.measure = "fpr")
+
+plot(ROCRperf, colorize = TRUE, text.adj = c(-0.2,1.7), print.cutoffs.at = seq(0,1,0.1))
+```
+```{r}
+auc <- performance(ROCRpred, measure = "auc")
+auc <- auc@y.values[[1]]
+auc
+```
+
+Using this model on the test data set.
+```{r}
+test_set_final <- new_data[is.na(new_data) == TRUE,]
+
+```
+
+
+```{r}
+result_final <- predict(model,newdata=test_set_final,type='response')
+result_final <- ifelse(result_final > 0.5,1,0)
+
+```
+
+
+
+\section{6. Result}
+From the accuracy and AUC above, the prediction using logistic regression perform well is this case. The accuracy of this model on the test set is higher than 85%. From the anova table, we can tell that there are some fields are signficant: Age, P-Class, Sex, and Travel alone. 
+
