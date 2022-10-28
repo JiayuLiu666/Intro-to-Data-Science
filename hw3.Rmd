@@ -1,0 +1,188 @@
+---
+title: "hw3"
+author: "Jiayu Liu"
+date: '2022-06-21'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+library(plyr)
+library(tidyverse)
+```
+
+
+
+```{r cars}
+debt <- read.csv("debt.csv", as.is = TRUE)
+```
+
+
+
+```{r pressure, echo=FALSE}
+mean.growth <- function(country.df){
+  return(mean(country.df$growth))
+}
+```
+
+```{r}
+daply(debt,
+      .(Country),
+      mean.growth)
+```
+
+```{r}
+growth_y <- daply(debt,
+                  .(Year),
+                  mean.growth)
+year <- seq(1947,2010,by=1)
+plot(year,growth_y,sty="l",ylab='mean growth',type='l')
+```
+### 3
+```{r}
+signif(cor(debt$growth,debt$ratio),3)
+```
+```{r}
+correlation <- function(df){
+  return(cor(df$growth,df$ratio))
+}
+
+correla <- daply(debt,
+      .(Country),
+      correlation
+      )
+correla
+signif(mean(correla),3)
+hist(correla,breaks=10)
+```
+### c
+```{r}
+mean_year <- daply(debt,
+      .(Year),
+      correlation)
+mean_year
+hist(mean_year,breaks=10, xlab='year')
+mean(mean_year)
+```
+### 3d
+```{r}
+larger0 <- function(df1){
+  return(df1>0)
+
+
+
+  }
+aaply(correla,1,larger0)
+table(aaply(correla,1,larger0))
+unlist(lapply(aaply(correla,1,larger0), function(x) x[isTRUE(x)]))
+
+```
+From the data above, we can tell that there is a negative correlation between GDP growth and debt. As we can see there are 6 countries going against general trend.
+```{r}
+aaply(mean_year,1,larger0)
+table(aaply(mean_year,1,larger0))
+unlist(lapply(aaply(mean_year,1,larger0), function(x) x[isTRUE(x)]))
+```
+### There are 15 years going against the trend.
+
+
+## 4
+```{r}
+fitline <- lm(growth~ratio, debt)
+summary(fitline)
+```
+The intercept is roughly 4.28 and beta1 is -0.0183.
+```{r}
+plot(debt$growth~debt$ratio)
+abline(lm(debt$growth~debt$ratio), col="red")
+```
+### 5
+```{r}
+correla[correla < -0.5]
+```
+```{r}
+par(mfrow=c(2,2))
+
+plot(growth~ratio, data = debt[debt$Country=="France",],
+     main = "France")
+abline(lm(growth~ratio, data = debt[debt$Country=="France",]), col="red")
+
+plot(growth~ratio, data = debt[debt$Country=="Germany",],
+     main = "Germany")
+abline(lm(growth~ratio, data = debt[debt$Country=="Germany",]), col="blue")
+
+plot(growth~ratio, data = debt[debt$Country=="Italy",],
+     main = "Italy")
+abline(lm(growth~ratio, data = debt[debt$Country=="Italy",]), col="red")
+
+plot(growth~ratio, data = debt[debt$Country=="Japan",],
+     main = "Japan")
+abline(lm(growth~ratio, data = debt[debt$Country=="Japan",]), col="blue")
+```
+### 6a
+```{r}
+
+
+France.new <- filter(debt,Country == 'France')
+dim(France.new)
+```
+```{r}
+France.new$next.growth <- NA
+
+for (i in 1:(nrow(France.new)-1)){
+if (France.new$Year[i+1]==France.new$Year[i]+1){
+  France.new$next.growth[i] = France.new$growth[i+1]
+  } 
+  else
+    {France.new$next.growth[i] = NA}
+  }
+France.new
+France.new[France.new$Year == 1971,]
+France.new[France.new$Year == 1972,]
+```
+### 7
+```{r}
+debt$next.growth <- NA
+
+
+next.g <- function(country.df){
+for (i in 1:(nrow(country.df)-1)){
+if (country.df$Year[i+1]==country.df$Year[i]+1){
+  country.df$next.growth[i] = country.df$growth[i+1]
+  } 
+  else
+  {country.df$next.growth[i] = NA}
+  
+}
+  return(country.df)
+}
+
+whole_data <- ddply(debt,
+      .(Country),
+      next.g)
+
+
+
+filter(whole_data,Country == "France" & Year == 2009)
+
+```
+### 8
+```{r}
+line_r <- lm(whole_data$next.growth~whole_data$ratio)
+
+summary(line_r)
+plot(whole_data$next.growth~whole_data$ratio)
+abline(line_r, col="red")
+```
+### the slope from the summary table is -0.0116 and the intercept is 3.924. By comparing with the previous graph, the relation between ratio and growth is weak. There is not much difference between two graphs.
+
+
+### 9
+```{r}
+linen <- lm(whole_data$next.growth~whole_data$growth) 
+plot(whole_data$next.growth~whole_data$growth)
+abline(linen, col="red")
+summary(linen)
+```
+The intercept is 1.97 and slope is 0.4. From the graph we can tell that there is a stronger relation between current year and next year than growth and ratio.
